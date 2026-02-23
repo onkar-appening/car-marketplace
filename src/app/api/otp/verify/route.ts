@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import getDb from '@/lib/db';
-import { randomUUID as uuidv4 } from 'crypto';
+import { getUserByMobile, createUser, updateUser, updateVehicle } from '@/lib/store';
 
 const MASTER_OTP = '0000';
 
@@ -12,28 +11,17 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Invalid OTP. Please try again.' }, { status: 400 });
         }
 
-        const db = getDb();
-
-        // Create or find user
-        let user = db.prepare('SELECT * FROM users WHERE mobile = ?').get(mobile) as any;
+        let user = getUserByMobile(mobile);
 
         if (!user) {
-            const userId = uuidv4();
-            db.prepare(`
-        INSERT INTO users (id, name, email, mobile, is_verified)
-        VALUES (?, ?, ?, ?, 1)
-      `).run(userId, fullName, email || null, mobile);
-            user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as any;
+            user = createUser({ name: fullName, email, mobile });
         } else {
-            db.prepare('UPDATE users SET is_verified = 1, name = ?, email = ? WHERE mobile = ?')
-                .run(fullName, email || null, mobile);
-            user = db.prepare('SELECT * FROM users WHERE mobile = ?').get(mobile) as any;
+            updateUser(user.id, { name: fullName, email: email || null, is_verified: 1 });
+            user = getUserByMobile(mobile)!;
         }
 
-        // Link vehicle to user
         if (vin) {
-            db.prepare('UPDATE vehicles SET user_id = ?, status = ? WHERE vin = ?')
-                .run(user.id, 'verified', vin.toUpperCase());
+            updateVehicle(vin.toUpperCase(), { user_id: user.id, status: 'verified' });
         }
 
         return NextResponse.json({ success: true, user });

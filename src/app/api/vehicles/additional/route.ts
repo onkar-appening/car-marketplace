@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import getDb from '@/lib/db';
+import { getVehicleByVin, updateVehicle } from '@/lib/store';
 
 export async function POST(req: NextRequest) {
     try {
@@ -9,17 +9,18 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'VIN required' }, { status: 400 });
         }
 
-        const db = getDb();
         const vinUpper = vin.trim().toUpperCase();
+        const vehicle = getVehicleByVin(vinUpper);
+        if (!vehicle) {
+            return NextResponse.json({ error: 'Vehicle not found' }, { status: 404 });
+        }
 
-        db.prepare(`
-      UPDATE vehicles SET
-        mileage = ?,
-        color = ?,
-        expected_price = ?,
-        status = 'listed'
-      WHERE vin = ?
-    `).run(mileage, color, expectedPrice, vinUpper);
+        updateVehicle(vinUpper, {
+            mileage,
+            color,
+            expected_price: expectedPrice,
+            status: 'listed',
+        });
 
         return NextResponse.json({ success: true });
     } catch (err: any) {

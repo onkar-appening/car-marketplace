@@ -1,44 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
-import getDb from '@/lib/db';
+import { getVehicleByVin, updateVehicle } from '@/lib/store';
 
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const {
-            vin,
-            accidentHistory,
-            keysCount,
-            tireCondition,
-            titleStatus,
-            damages,
-            fullName,
-            email,
-            mobile,
-        } = body;
+        const { vin, accidentHistory, keysCount, tireCondition, titleStatus, damages, fullName, email, mobile } = body;
 
         if (!vin || !fullName || !mobile) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
-        const db = getDb();
         const vinUpper = vin.trim().toUpperCase();
-
-        const vehicle = db.prepare('SELECT * FROM vehicles WHERE vin = ?').get(vinUpper) as any;
+        const vehicle = getVehicleByVin(vinUpper);
         if (!vehicle) {
             return NextResponse.json({ error: 'Vehicle not found' }, { status: 404 });
         }
 
-        // Update vehicle details
-        db.prepare(`
-      UPDATE vehicles SET
-        accident_history = ?,
-        keys_count = ?,
-        tire_condition = ?,
-        title_status = ?,
-        damages = ?,
-        status = 'pending_otp'
-      WHERE vin = ?
-    `).run(accidentHistory, keysCount, tireCondition, titleStatus, damages, vinUpper);
+        updateVehicle(vinUpper, {
+            accident_history: accidentHistory,
+            keys_count: keysCount,
+            tire_condition: tireCondition,
+            title_status: titleStatus,
+            damages,
+            status: 'pending_otp',
+        });
 
         return NextResponse.json({ success: true, vin: vinUpper, fullName, email, mobile });
     } catch (err: any) {

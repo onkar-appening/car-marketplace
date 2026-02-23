@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import getDb from '@/lib/db';
+import { getUserById, getUserByMobile, getVehiclesByUserId } from '@/lib/store';
 
 export async function GET(req: NextRequest) {
     try {
@@ -11,21 +11,13 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: 'userId or mobile required' }, { status: 400 });
         }
 
-        const db = getDb();
-
-        let user: any;
-        if (userId) {
-            user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
-        } else {
-            user = db.prepare('SELECT * FROM users WHERE mobile = ?').get(mobile);
-        }
+        const user = userId ? getUserById(userId) : getUserByMobile(mobile!);
 
         if (!user) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
-        const vehicles = db.prepare('SELECT * FROM vehicles WHERE user_id = ? ORDER BY created_at DESC').all(user.id);
-
+        const vehicles = getVehiclesByUserId(user.id);
         return NextResponse.json({ user, vehicles });
     } catch (err: any) {
         return NextResponse.json({ error: err.message }, { status: 500 });
