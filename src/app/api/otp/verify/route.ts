@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import getDb from '@/lib/db';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID as uuidv4 } from 'crypto';
 
 const MASTER_OTP = '0000';
 
